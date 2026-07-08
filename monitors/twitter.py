@@ -36,18 +36,15 @@ class TwitterMonitor:
 
         logger.info("Fetching Twitter feed for @%s via Apify...", self.username)
 
-        # Prepare the Actor input
+        # Prepare the Actor input for the new supported actor
         run_input = {
-            "handle": [self.username],
-            "tweetsDesired": 10,
-            "addUserInfo": False,
-            "startUrls": [],
-            "proxyConfig": {"useApifyProxy": True}
+            "twitterHandles": [self.username],
+            "maxItems": 10
         }
 
         try:
-            # Run the Actor (quacker/twitter-scraper)
-            run = self.client.actor("quacker/twitter-scraper").call(run_input=run_input)
+            # Run the Actor (apidojo/tweet-scraper)
+            run = self.client.actor("apidojo/tweet-scraper").call(run_input=run_input)
             
             # Fetch and parse Actor results from the run's dataset
             results = []
@@ -63,14 +60,14 @@ class TwitterMonitor:
 
     def _parse_item(self, item: dict[str, Any]) -> dict[str, Any]:
         """Parse a single Apify tweet item into the standard schema."""
-        full_text = item.get("full_text", "")
-        tweet_id = item.get("id", "")
-        content_id = tweet_id or hashlib.md5(full_text.encode()).hexdigest()
+        full_text = item.get("text", item.get("full_text", ""))
+        tweet_id = item.get("id", item.get("id_str", ""))
+        content_id = str(tweet_id) or hashlib.md5(full_text.encode()).hexdigest()
         
         url = item.get("url") or f"https://twitter.com/{self.username}/status/{tweet_id}"
         
         # Parse timestamp
-        created_at = item.get("created_at")
+        created_at = item.get("createdAt", item.get("created_at"))
         if created_at:
             try:
                 # Typically format: "Mon Jul 08 14:30:00 +0000 2026" or ISO
