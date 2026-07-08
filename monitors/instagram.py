@@ -48,7 +48,8 @@ class InstagramMonitor:
             
             # Fetch and parse Actor results from the run's dataset
             results = []
-            for item in self.client.dataset(run["defaultDatasetId"]).iterate_items():
+            dataset_id = run.get("defaultDatasetId") if isinstance(run, dict) else getattr(run, "defaultDatasetId", getattr(run, "default_dataset_id", None))
+            for item in self.client.dataset(dataset_id).iterate_items():
                 results.append(self._parse_item(item))
             
             logger.info("Parsed %d posts for Instagram @%s", len(results), self.username)
