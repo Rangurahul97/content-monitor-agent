@@ -1,0 +1,25 @@
+# Core
+PyYAML>=6.0
+APScheduler>=3.10
+requests>=2.31
+
+# YouTube
+feedparser>=6.0
+youtube-transcript-api>=0.6
+
+# AI Analysis
+google-genai>=1.0
+
+# Notifications
+python-telegram-bot>=21.0
+aiohttp>=3.9
+
+# Utilities
+colorama>=0.4
+rich>=13.0
+
+# Web Dashboard
+fastapi>=0.115
+uvicorn>=0.30
+
+apify-client

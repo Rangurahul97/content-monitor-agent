@@ -1,0 +1,26 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "*.py",
+      "*.db",
+      "*.yaml",
+      "requirements.txt",
+      "firebase-admin.json",
+      "database/**",
+      "monitors/**",
+      "analyzer/**",
+      "__pycache__/**",
+      "data/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/",
+        "destination": "/static/index.html"
+      }
+    ]
+  }
+}
