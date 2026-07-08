@@ -16,5 +16,5 @@ COPY . .
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 
-# Run the agent worker (not the web server)
-CMD ["python", "main.py"]
+# Run the agent server
+CMD ["python", "server.py"]

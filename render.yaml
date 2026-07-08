@@ -1,7 +1,7 @@
 services:
-  - type: worker
+  - type: web
     name: content-monitor-agent
     env: docker
-    plan: free # Use Render's free tier for background workers
-    # We use a worker instead of a web service because it doesn't need to listen on a port
-    # It just runs main.py which loops every 5 minutes
+    plan: free # Uses Render's free tier for web services
+    # We use a web service to pass Render's health checks and stay free
+
