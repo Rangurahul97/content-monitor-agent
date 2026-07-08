@@ -74,10 +74,10 @@ def query_feed(storage: ContentStorage, platform: str = None, search: str = None
     
     # Sort the items
     if sort == 'importance':
-        items.sort(key=lambda x: x.get('analysis', {}).get('importance_score', 0), reverse=True)
+        items.sort(key=lambda x: int(x.get('analysis', {}).get('importance_score') or 0), reverse=True)
     else:
         # Default 'latest': sort by published_at DESC, fallback to analyzed_at
-        items.sort(key=lambda x: x.get('analysis', {}).get('published_at', x.get('analyzed_at', '')), reverse=True)
+        items.sort(key=lambda x: x.get('analysis', {}).get('published_at') or x.get('analyzed_at') or '', reverse=True)
     
     conn.close()
     return items, total
