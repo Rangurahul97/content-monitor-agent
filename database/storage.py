@@ -185,18 +185,21 @@ class ContentStorage:
             
             # Push to Firebase if configured
             if self.db:
-                doc_ref = self.db.collection('seen_content').document(content_id)
-                doc_ref.set({
-                    "platform": platform,
-                    "content_id": content_id,
-                    "url": url,
-                    "title": title,
-                    "content_type": content_type,
-                    "summary": summary,
-                    "analyzed_at": analyzed_at,
-                    "raw_data": raw_json,
-                }, merge=True)
-                logger.info("☁️ Pushed %s to Firebase Firestore", content_id)
+                try:
+                    doc_ref = self.db.collection('seen_content').document(content_id)
+                    doc_ref.set({
+                        "platform": platform,
+                        "content_id": content_id,
+                        "url": url,
+                        "title": title,
+                        "content_type": content_type,
+                        "summary": summary,
+                        "analyzed_at": analyzed_at,
+                        "raw_data": raw_json,
+                    }, merge=True)
+                    logger.info("☁️ Pushed %s to Firebase Firestore", content_id)
+                except Exception as e:
+                    logger.error("Failed to push to Firebase (is Firestore Database created?): %s", e)
                 
         except sqlite3.Error as exc:
             logger.error("Error marking content as seen: %s", exc)
