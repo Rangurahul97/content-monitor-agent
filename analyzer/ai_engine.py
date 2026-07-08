@@ -42,24 +42,35 @@ class ContentAnalyzer:
 
     def __init__(
         self,
-        api_key: str,
+        api_key: str | list[str],
         model: str = "gemini-2.5-flash",
         temperature: float = 0.3,
     ) -> None:
         """Initialize the content analyzer.
 
         Args:
-            api_key: Google API key for Gemini access.
+            api_key: Google API key(s) for Gemini access. Can be a list or a comma-separated string.
             model: Gemini model identifier. Defaults to ``gemini-2.5-flash``.
             temperature: Sampling temperature (0.0–1.0). Lower values yield
                 more deterministic outputs. Defaults to 0.3.
         """
-        self.client: genai.Client = genai.Client(api_key=api_key)
+        if isinstance(api_key, str):
+            self.api_keys = [k.strip() for k in api_key.split(",") if k.strip()]
+        else:
+            self.api_keys = api_key
+            
+        if not self.api_keys:
+            logger.warning("No Gemini API key provided. Analysis will fail.")
+            self.api_keys = [""]
+            
+        self.current_key_idx = 0
+        self.client: genai.Client = genai.Client(api_key=self.api_keys[self.current_key_idx])
         self.model: str = model
         self.temperature: float = temperature
         self._last_call_time: float = 0.0
         logger.info(
-            "ContentAnalyzer initialized with model=%s, temperature=%s",
+            "ContentAnalyzer initialized with %d keys, model=%s, temperature=%s",
+            len(self.api_keys),
             model,
             temperature,
         )
@@ -69,57 +80,50 @@ class ContentAnalyzer:
     # ------------------------------------------------------------------
 
     def analyze(self, content: dict[str, Any]) -> dict[str, Any]:
-        """Analyze a piece of content and return structured insights.
-
-        Args:
-            content: A dictionary describing the content to analyze.
-                Expected keys:
-                    - ``platform`` (str): e.g. "youtube", "instagram", "twitter"
-                    - ``content_type`` (str): e.g. "video", "post", "reel", "tweet"
-                    - ``title`` (str): Title or headline.
-                    - ``description`` (str): Description, caption, or tweet text.
-                    - ``url`` (str): Link to the original content.
-                    - ``transcript`` (str, optional): Full transcript (YouTube).
-
-        Returns:
-            A dictionary with the following keys:
-                - ``summary`` (str)
-                - ``key_topics`` (list[str])
-                - ``key_takeaways`` (list[str])
-                - ``content_category`` (str)
-                - ``importance_score`` (int, 1–10)
-                - ``sentiment`` (str)
-        """
+        """Analyze a piece of content and return structured insights."""
         prompt = self._build_prompt(content)
 
         # Rate-limit: ensure at least _RATE_LIMIT_SECONDS between calls.
         self._enforce_rate_limit()
 
-        try:
-            logger.debug("Sending analysis request to Gemini (%s)", self.model)
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    temperature=self.temperature,
-                ),
-            )
-            self._last_call_time = time.monotonic()
+        for attempt in range(len(self.api_keys)):
+            try:
+                # Ensure client is using the current key
+                self.client = genai.Client(api_key=self.api_keys[self.current_key_idx])
+                
+                logger.debug("Sending analysis request to Gemini (%s) using key index %d", self.model, self.current_key_idx)
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=genai.types.GenerateContentConfig(
+                        temperature=self.temperature,
+                    ),
+                )
+                self._last_call_time = time.monotonic()
 
-            raw_text: str = response.text
-            logger.debug("Received response (%d chars)", len(raw_text))
-            return self._parse_response(raw_text)
+                raw_text: str = response.text
+                logger.debug("Received response (%d chars)", len(raw_text))
+                return self._parse_response(raw_text)
 
-        except Exception:
-            logger.exception(
-                "Gemini API call failed for content: %s",
-                content.get("title", "<unknown>"),
-            )
-            fallback = dict(self._FALLBACK_ANALYSIS)
-            fallback["summary"] = (
-                f"Analysis failed for: {content.get('title', 'Unknown content')}"
-            )
-            return fallback
+            except Exception as e:
+                logger.error("Gemini API call failed with key index %d: %s", self.current_key_idx, e)
+                
+                # Try next key if available
+                if attempt < len(self.api_keys) - 1:
+                    self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
+                    logger.info("Switching to next Gemini API key (index %d)...", self.current_key_idx)
+                    time.sleep(1)  # Brief pause before retrying with new key
+                else:
+                    logger.exception(
+                        "All %d Gemini API keys exhausted/failed for content: %s",
+                        len(self.api_keys),
+                        content.get("title", "<unknown>"),
+                    )
+                    fallback = dict(self._FALLBACK_ANALYSIS)
+                    fallback["summary"] = (
+                        f"Analysis failed after trying all keys: {content.get('title', 'Unknown content')}"
+                    )
+                    return fallback
 
     # ------------------------------------------------------------------
     # Prompt construction
