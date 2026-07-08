@@ -36,15 +36,15 @@ class TwitterMonitor:
 
         logger.info("Fetching Twitter feed for @%s via Apify...", self.username)
 
-        # Prepare the Actor input for the new supported actor
+        # Prepare the Actor input for the free kaitito/twitter-scraper
         run_input = {
             "twitterHandles": [self.username],
             "maxItems": 10
         }
 
         try:
-            # Run the Actor (apidojo/tweet-scraper)
-            run = self.client.actor("apidojo/tweet-scraper").call(run_input=run_input)
+            # Run the Actor (kaitito/twitter-scraper)
+            run = self.client.actor("kaitito/twitter-scraper").call(run_input=run_input)
             
             # Fetch and parse Actor results from the run's dataset
             results = []
@@ -71,22 +71,33 @@ class TwitterMonitor:
         created_at = item.get("createdAt", item.get("created_at"))
         if created_at:
             try:
-                # Typically format: "Mon Jul 08 14:30:00 +0000 2026" or ISO
-                # We'll just fallback if parse fails
-                dt = datetime.strptime(created_at, '%a %b %d %H:%M:%S +0000 %Y')
+                # kaitito returns standard ISO like "2023-11-21T18:41:09.000Z" or similar
+                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                 published_at = dt.replace(tzinfo=timezone.utc).isoformat()
             except ValueError:
-                published_at = datetime.now(timezone.utc).isoformat()
+                try:
+                    # Fallback for standard twitter format
+                    dt = datetime.strptime(created_at, '%a %b %d %H:%M:%S +0000 %Y')
+                    published_at = dt.replace(tzinfo=timezone.utc).isoformat()
+                except Exception:
+                    published_at = datetime.now(timezone.utc).isoformat()
         else:
             published_at = datetime.now(timezone.utc).isoformat()
             
         # Extract media
-        media = item.get("extended_entities", {}).get("media", [])
-        media_urls = [m.get("media_url_https") for m in media if "media_url_https" in m]
+        media = item.get("media", [])
+        media_urls = []
+        if isinstance(media, list):
+            for m in media:
+                if isinstance(m, dict) and "url" in m:
+                    media_urls.append(m["url"])
+                elif isinstance(m, dict) and "media_url_https" in m:
+                    media_urls.append(m["media_url_https"])
+        
         thumbnail = media_urls[0] if media_urls else ""
         
         # Detect threads (basic heuristic)
-        is_reply = bool(item.get("in_reply_to_status_id"))
+        is_reply = bool(item.get("inReplyToStatusId") or item.get("in_reply_to_status_id"))
         content_type = "thread" if is_reply else "tweet"
         
         title = full_text[:120].strip() if full_text else "New Tweet"
