@@ -35,7 +35,7 @@ from utils.logger import setup_logger, get_logger
 CONFIG_PATH = Path(__file__).parent / "config.yaml"
 
 
-def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
+def load_config(path: Path = None) -> dict[str, Any]:
     """Load and validate the YAML configuration file.
 
     Args:
@@ -47,6 +47,9 @@ def load_config(path: Path = CONFIG_PATH) -> dict[str, Any]:
     Raises:
         SystemExit: When the config file is missing or invalid.
     """
+    if path is None:
+        path = Path("/etc/secrets/config.yaml") if Path("/etc/secrets/config.yaml").exists() else CONFIG_PATH
+
     if not path.exists():
         print(f"❌ Configuration file not found: {path}")
         print("   Copy config.yaml.example → config.yaml and fill in your settings.")

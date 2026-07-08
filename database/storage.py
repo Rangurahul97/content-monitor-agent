@@ -60,6 +60,10 @@ class ContentStorage:
         self.db_path = db_path
         self.db = None
 
+        if firebase_cred_path:
+            if not os.path.exists(firebase_cred_path) and os.path.exists(f"/etc/secrets/{firebase_cred_path}"):
+                firebase_cred_path = f"/etc/secrets/{firebase_cred_path}"
+
         if firebase_cred_path and os.path.exists(firebase_cred_path):
             try:
                 if not firebase_admin._apps:
