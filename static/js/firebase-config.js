@@ -2,7 +2,7 @@
 // 1. Go to Firebase Console -> Project Settings -> General
 // 2. Scroll down to "Your apps" and copy the config object
 const firebaseConfig = {
-    apiKey: "AIzaSyDxBaHpRx2diSXoSkGJIm4fO-mWCCHZGH0",
+    apiKey: "YOUR_API_KEY",
     authDomain: "contentmonitor.firebaseapp.com",
     projectId: "contentmonitor",
     storageBucket: "contentmonitor.firebasestorage.app",
