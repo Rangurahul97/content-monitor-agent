@@ -51,8 +51,9 @@ def load_config(path: Path = None) -> dict[str, Any]:
         path = Path("/etc/secrets/config.yaml") if Path("/etc/secrets/config.yaml").exists() else CONFIG_PATH
 
     if not path.exists():
-        print(f"❌ Configuration file not found: {path}")
-        print("   Copy config.yaml.example → config.yaml and fill in your settings.")
+        print(f"❌ Configuration file not found at {path}")
+        print("   If deploying on Render, ensure you added 'config.yaml' as a Secret File!")
+        print("   Copy config.yaml.example → config.yaml and fill in your settings locally.")
         sys.exit(1)
 
     with open(path, "r", encoding="utf-8") as fh:
